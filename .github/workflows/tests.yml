@@ -15,4 +15,4 @@ jobs:
       - name: Compile Python
         run: python -m compileall -q .
       - name: Run unit tests
-        run: python -m unittest discover -v
+        run: python -m unittest -v test_asic test_bridge test_fleet test_tenants test_upgrade
