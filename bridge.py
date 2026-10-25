@@ -1,4 +1,4 @@
-"""HashMargin local pilot API. Python 3.10+, standard library only.
+I"""HashMargin local pilot API. Python 3.10+, standard library only.
 No pool passwords, private keys, remote commands, or payment collection.
 """
 import argparse
@@ -27,7 +27,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 DB = Path(os.environ.get('HASHMARGIN_DB', str(Path(__file__).resolve().parent / 'hashmargin.sqlite3')))
-TOKEN = os.environ.get('HASHMARGIN_TOKEN', 
+TOKEN = os.environ.get('HASHMARGIN_TOKEN', ' ')
 HOST = os.environ.get('HASHMARGIN_HOST', '0.0.0.0')
 PORT = int(os.environ.get('PORT', os.environ.get('HASHMARGIN_PORT', '8787')))
 MAX_BODY = 8192
@@ -460,8 +460,9 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__=='__main__':
     if not TOKEN or len(TOKEN)<24:raise SystemExit('Set HASHMARGIN_TOKEN to a random secret of at least 24 characters')
-    if HOST not in ('127.0.0.1', 'localhost', '::1', '0.0.0.0'):
-    raise SystemExit('Invalid server host')
+        if HOST not in ('127.0.0.1', 'localhost', '::1', '0.0.0.0'):
+        raise SystemExit('Invalid 
+        server host')
     init_db()
     tenant_store.initialize(TENANT_DB)
     threading.Thread(target=notification_loop,args=(threading.Event(),),daemon=True).start()
