@@ -27,7 +27,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 DB = Path(os.environ.get('HASHMARGIN_DB', str(Path(__file__).resolve().parent / 'hashmargin.sqlite3')))
-TOKEN = os.environ.get('HASHMARGIN_TOKEN', ' ')
+TOKEN = os.environ.get('HASHMARGIN_TOKEN', '')
 HOST = os.environ.get('HASHMARGIN_HOST', '0.0.0.0')
 PORT = int(os.environ.get('PORT', os.environ.get('HASHMARGIN_PORT', '8787')))
 MAX_BODY = 8192
