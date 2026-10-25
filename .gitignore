@@ -1,0 +1,8 @@
+*.sqlite3
+*.sqlite3-*
+.env
+__pycache__/
+.gradle/
+**/build/
+*.jks
+*.keystore
