@@ -1,4 +1,4 @@
-I"""HashMargin local pilot API. Python 3.10+, standard library only.
+"""HashMargin local pilot API. Python 3.10+, standard library only.
 No pool passwords, private keys, remote commands, or payment collection.
 """
 import argparse
@@ -458,17 +458,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):self.respond(405,{'error':'unsupported'})
     def log_message(self,format,*args):pass # avoid logging auth-related request data
 
-if __name__=='__main__':
-    if not TOKEN or len(TOKEN)<24:raise SystemExit('Set HASHMARGIN_TOKEN to a random secret of at least 24 characters')
-        if HOST not in ('127.0.0.1', 'localhost', '::1', '0.0.0.0'):
-        raise SystemExit('Invalid 
-        server host')
+if __name__ == '__main__':
+    if not TOKEN or len(TOKEN) < 24:
+        raise SystemExit('Set HASHMARGIN_TOKEN to a random secret of at least 24 characters')
+    if HOST not in ('127.0.0.1', 'localhost', '::1', '0.0.0.0'):
+        raise SystemExit('Invalid server host')
     init_db()
     tenant_store.initialize(TENANT_DB)
-    threading.Thread(target=notification_loop,args=(threading.Event(),),daemon=True).start()
-    asics=configured_miners()
+    threading.Thread(target=notification_loop, args=(threading.Event(),), daemon=True).start()
+    asics = configured_miners()
     if asics:
-        threading.Thread(target=poll_loop,args=(asics,threading.Event()),daemon=True).start()
+        threading.Thread(target=poll_loop, args=(asics, threading.Event()), daemon=True).start()
         print(f'Read-only ASIC polling enabled for {len(asics)} LAN devices')
-    print(f'HashMargin bridge listening on http://{HOST}:{PORT} (loopback only)')
-    ThreadingHTTPServer((HOST,PORT),Handler).serve_forever()
+    print(f'HashMargin bridge listening on http://{HOST}:{PORT}')
+    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
