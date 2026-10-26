@@ -1,18 +1,33 @@
-"""Public staging preview: no authentication, telemetry, database, or customer data."""
+"""Safe public HashMargin preview. No miner connections, credentials, accounts or payments."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 import json
 import os
+from urllib.parse import urlsplit
+
+DASHBOARD = Path(__file__).resolve().parent / "hashmargin-dashboard.html"
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path not in ("/", "/healthz"):
-            self.send_error(404)
-            return
-        payload = {"status": "ok", "service": "hashmargin-staging", "mode": "preview-only"} if self.path == "/healthz" else {"product": "HashMargin Pro", "status": "Coming soon", "note": "Private pilot under development. No accounts, miner connections, or payments enabled."}
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
+        path = urlsplit(self.path).path
+        if path == "/healthz":
+            self.respond(200, json.dumps({"status": "ok", "service": "hashmargin-staging", "mode": "preview-only"}).encode(), "application/json")
+        elif path in ("/", "/dashboard"):
+            try:
+                html = DASHBOARD.read_bytes()
+            except OSError:
+                self.respond(503, b"Dashboard unavailable", "text/plain; charset=utf-8")
+                return
+            self.respond(200, html, "text/html; charset=utf-8")
+        else:
+            self.respond(404, b"Not found", "text/plain; charset=utf-8")
+
+    def respond(self, status, body, content_type):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
