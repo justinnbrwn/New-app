@@ -1,4 +1,5 @@
 HashMargin Pro — Free Calculator Beta Terms
+Operator: Justinn Brown, sole proprietor (business identity pending any required assumed-name filing).
 Last updated: October 26, 2026
 
 HashMargin Pro's public beta is an illustrative mining-economics calculator. Figures are estimates based on inputs supplied by the visitor; they are not live pool measurements, confirmed payouts, or guaranteed financial results.
