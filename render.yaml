@@ -1,0 +1,9 @@
+# Safe public preview only. Does not launch bridge.py or expose tenant data.
+services:
+  - type: web
+    name: hashmargin-preview
+    runtime: python
+    plan: free
+    buildCommand: python -m compileall -q staging.py
+    startCommand: python staging.py
+    healthCheckPath: /healthz
