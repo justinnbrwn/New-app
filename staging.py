@@ -5,7 +5,9 @@ import json
 import os
 from urllib.parse import urlsplit
 
-DASHBOARD = Path(__file__).resolve().parent / "hashmargin-dashboard.html"
+ROOT = Path(__file__).resolve().parent
+DASHBOARD = ROOT / "hashmargin-dashboard.html"
+HOMEPAGE = ROOT / "hashmargin-home.html"
 PUBLIC_DOCS = {"privacy": "PRIVACY.md", "terms": "TERMS.md"}
 
 class Handler(BaseHTTPRequestHandler):
@@ -15,7 +17,7 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, json.dumps({"status": "ok", "service": "hashmargin-staging", "mode": "preview-only"}).encode(), "application/json")
         elif path in ("/", "/dashboard"):
             try:
-                html = DASHBOARD.read_bytes()
+                html = (HOMEPAGE if path == "/" else DASHBOARD).read_bytes()
             except OSError:
                 self.respond(503, b"Dashboard unavailable", "text/plain; charset=utf-8")
                 return
