@@ -3,7 +3,8 @@
 Status: **free calculator beta in preparation**. No claim of paid-service readiness.
 
 ## Required before publicly representing this as a commercial business
-- [ ] Identify the actual operating person or registered legal entity, jurisdiction, and a real customer support contact. Do not invent these.
+- [x] Identify the proposed operator: Justinn Brown, sole proprietor (user-confirmed).
+- [ ] Confirm applicable jurisdiction, any assumed-name filing, and a real customer support contact.
 - [ ] Review applicable business registration, tax, consumer-protection, and privacy obligations with qualified professionals where needed.
 - [ ] Publish accurate privacy notice and terms that match hosting logs, any analytics, and actual data flows. Current pages are provisional.
 - [ ] Confirm ownership/licensing for all branding, graphics, code, and third-party data sources.
