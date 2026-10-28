@@ -49,3 +49,14 @@ Email delivery through the configured Gmail SMTP service was verified in the own
 Account testing is limited by `HASHMARGIN_ACCOUNT_TEST_EMAILS` to the invited owner address. Wider customer signup remains gated until the remaining launch items are complete. Billing remains disabled, and no Stripe sandbox or live transaction has been attempted. Do not enable live charges.
 
 Updated offline verification: 51 tests under `tests/` and 23 legacy API/tenant tests pass. Real-provider signup/sign-in/logout verification is performed separately after deployment; do not interpret fake-provider unit tests as proof of Stripe integration.
+
+
+### Live authentication verification completed
+
+On October 28, the deployed website completed a real Supabase signup/sign-in using the owner's delivered confirmation email: verification 200; authenticated account read 200 with the correct email; forged bearer 401; non-invited email 403; logout 200; the same bearer after logout 401; replayed one-time link 401. Checkout returns 503 because billing remains disabled. The live account page renders the enabled invitation-limited form.
+
+Render deployment `dep-dbh3d0mvq37c73bn1ae0` became live at source commit `9e948f374c08cc4db2d5a1f930e4d91c3a1f209f`. Both Render and the Supabase organization were confirmed on Free plans. No paid resource or real charge was activated.
+
+The final Supabase advisor also reported that leaked-password protection is disabled. This beta uses passwordless sign-in and stores no account passwords; no paid protection upgrade was enabled. Reference: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+Stripe is still not connected to this conversation. Sandbox key, test recurring price, webhook signing secret, and portal configuration remain unavailable; therefore Stripe end-to-end testing and any commercial launch are incomplete.
