@@ -11,6 +11,29 @@ def git(*args):
     return subprocess.check_output(['git', *args], stderr=subprocess.PIPE)
 
 
+def safe_error(error):
+    """Describe the failing operation without source lines, secrets, or raw stderr."""
+    if isinstance(error, RuntimeError):
+        return str(error)
+    if isinstance(error, subprocess.CalledProcessError):
+        command = error.cmd if isinstance(error.cmd, list) else []
+        operation = command[1] if len(command) > 1 and command[0] == 'git' else 'task restart'
+        reason = (error.stderr or b'').lower()
+        known = [('untracked working tree files', 'untracked-file collision'),
+                 ('local changes', 'local-file collision'),
+                 ('not possible to fast-forward', 'branch needs merge'),
+                 ('unable to create', 'Git lock or file permission'),
+                 ('index.lock', 'Git index is locked'),
+                 ('authentication failed', 'GitHub authentication required')]
+        category = next((label for marker, label in known if marker.encode() in reason), 'operation failed')
+        return f'Stopped: {operation}, exit {error.returncode}, {category}. Task restart not confirmed.'
+    if isinstance(error, SyntaxError):
+        return f'Stopped: Python syntax check, line {error.lineno}. No source or keys displayed.'
+    if isinstance(error, OSError):
+        return f'Stopped: {type(error).__name__}, system code {error.errno}, Windows code {getattr(error, "winerror", None)}.'
+    return f'Stopped: {type(error).__name__}. No settings or keys displayed.'
+
+
 def update(repo, backup_root):
     os.chdir(repo)
     branch = 'feature/hashmargin-pro-dashboard'
@@ -82,6 +105,5 @@ if __name__ == '__main__':
         main()
     except Exception as error:
         # Command stdout/stderr and file contents may contain settings; never display them.
-        print(str(error) if isinstance(error, RuntimeError) else
-              'Update stopped safely. No settings or keys were displayed.')
+        print(safe_error(error))
         sys.exit(1)

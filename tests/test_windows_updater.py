@@ -3,10 +3,18 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from scripts.update_windows_monitor import update
+from scripts.update_windows_monitor import update, safe_error
 
 
 class WindowsUpdaterTests(unittest.TestCase):
+    def test_diagnostic_never_returns_stderr_or_source(self):
+        error = subprocess.CalledProcessError(128, ['git','merge','private-value'], stderr=b'index.lock private-secret-value')
+        text = safe_error(error)
+        self.assertIn('Git index is locked', text)
+        self.assertNotIn('private', text)
+        syntax = SyntaxError('private-secret-value', ('private-file', 9, 1, 'SECRET=private-value'))
+        self.assertNotIn('private', safe_error(syntax))
+
     def command(self, *args):
         return subprocess.check_output(['git', *args], cwd=self.repo, stderr=subprocess.PIPE)
 
