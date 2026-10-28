@@ -14,15 +14,11 @@ Accounts default off. Billing defaults off. `HASHMARGIN_BILLING_MODE=test` plus 
 - Test-only webhook raw-body signature and 5-minute timestamp verification. Subscription identity is upserted by unique Stripe subscription ID; ownership is immutable at the database layer. Entitlements are never accepted from a success URL, client metadata, or an old event snapshot. Current Stripe status, paid invoice, price and account ownership are checked on each account-status request.
 - SQL migration with database row-level security; authenticated customers can only read their own test subscriptions and cannot write billing records. The server key is only used by verified webhooks. No miner API exposed.
 
-## Remaining configuration — keep billing disabled
+## Current configuration — owner-only sandbox
 
-Supabase Free, database migration/RLS, owner-only authentication, and delivered email sign-in are verified below. Stripe sandbox resources are prepared below. The remaining secrets are not exposed by the connected tools. Enter these directly in Render Environment, never in chat or GitHub:
+The user saved server credentials directly in Render and explicitly approved enabling sandbox checkout. `HASHMARGIN_BILLING_MODE=test`; live billing remains impossible in this release. The sandbox webhook is enabled. Supabase Free, migration/RLS, owner-only authentication, delivered email sign-in, and all three server credentials have been verified through actual application operations; no secret values were retrieved or printed.
 
-- `STRIPE_SECRET_KEY`: `sk_test_...` from Hashmargin_pro sandbox (account `acct_1UV1cE9fowbuxAPk`).
-- `STRIPE_WEBHOOK_SECRET`: signing secret for webhook `we_1UVbtj9fowbuxAPkFgeDfKWM`.
-- `SUPABASE_SERVICE_ROLE_KEY`: server-side key for project `uwmqarxufkpacgxayloq`.
-
-The recurring price is already configured as `STRIPE_PRO_PRICE_ID`. After secrets are saved, enable the sandbox webhook, set `HASHMARGIN_BILLING_MODE=test`, deploy, and test the authenticated app checkout, signed webhook delivery/retry, entitlement updates, cancellation, and unpaid states. Until then the app returns 503 for checkout. Never enable live billing.
+`STRIPE_PRO_PRICE_ID=price_1UVbsM9fowbuxAPkj1YB9mjb`. Wider customer signup and any commercial launch remain gated by the limits below. No paid service or live charge is approved.
 
 ## Limits and gates before any live launch
 
@@ -66,8 +62,21 @@ Connected only to `acct_1UV1cE9fowbuxAPk` (Hashmargin_pro sandbox), `livemode=fa
 
 - Product `prod_VWfCzfLRypcEu4`; recurring USD 12/month price `price_1UVbsM9fowbuxAPkj1YB9mjb`.
 - Customer portal `bpc_1UVbt79fowbuxAPkeYhZAtQv`: invoice history, payment-method update, cancellation at period end; no plan switching.
-- Webhook `we_1UVbtj9fowbuxAPkFgeDfKWM`: app `/api/stripe/webhook`, checkout completion and subscription create/update/delete events, API version `2026-09-30.endive`. Kept disabled until its signing secret is saved.
+- Webhook `we_1UVbtj9fowbuxAPkFgeDfKWM`: app `/api/stripe/webhook`, checkout completion and subscription create/update/delete events, API version `2026-09-30.endive`. Enabled after the user saved its signing secret and explicitly approved sandbox checkout.
 - Standalone hosted checkout `cs_test_a1poaFCB3613w9MC1vwbvVQbv15LiNrtlmSIm9jqKBnvGcGEXLFrWY9XVt`: synthetic customer, test decline card rejected, test success card accepted, API status `complete`, payment status `paid`, `livemode=false`. Portal displays the paid $12 sandbox invoice.
 - Customer portal cancellation succeeded: the page confirms service ends November 28, 2026, with no renewal. Test subscription `sub_1UVbzA9fowbuxAPkeE1Cy4L9` and synthetic customer `cus_VWfHLyMa3zm8oT`. This standalone processor test is not linked to a real application user and does not prove webhook/entitlement integration.
 
 The application pins the tested Stripe API version, explicitly disables Managed Payments for its Checkout Sessions, uses card payment methods, and requests flexible subscription billing. All 74 scoped Python tests and JavaScript syntax checks pass. No live key, live transaction, or paid hosting was used.
+
+
+### Application-to-provider sandbox test completed
+
+October 28, 2026: manual credential deployment and approved test-mode deployment `dep-dbh4ujbl550s73c5jgig` are live. `/healthz` returned 200; `/api/config` confirmed accounts enabled, test checkout enabled, and live payments disabled. Render remains Free.
+
+The existing invited owner completed fresh email-link verification (200). The app read its account (200), created its own sandbox Checkout Session (200), and returned a hosted USD 12/month checkout. Synthetic billing identity and Stripe's test card were used; no real card or funds. Session `cs_test_a1OzpUAYfilQezLmkBUN7YFQbAkjQ61clhwmtncIDH7aRnjaGL54Eao9WK` completed, payment status paid, livemode false.
+
+The actual signed Stripe webhook created exactly one subscription ownership record in Supabase for `sub_1UVcka9fowbuxAPk7g7J4vqO`, customer `cus_VWg6imqQSxlA9n`. The authenticated app subsequently reported `test_subscription_active=true`, confirming the supplied Stripe test key, webhook signing secret, and Supabase server key operate together.
+
+Duplicate subscription checkout was rejected with 409. An invalid webhook signature was rejected with 400. The app-created customer portal returned 200 and displayed the paid sandbox invoice. Its cancellation flow confirmed service would end November 28. The disposable test subscription was then canceled immediately via the sandbox API (no proration/final invoice) to verify access removal and avoid leaving an active test subscription. The app then returned 200 with `test_subscription_active=false`, proving canceled access is removed.
+
+These are actual app/provider tests, distinct from the earlier standalone processor test and 74 scoped offline Python tests. Real time passage for expiry, past-due renewal simulation, and explicit webhook transport retry remain separate coverage gaps; commercial readiness is not claimed. Tax configuration must be reviewed before any future approved live launch; no tax service was activated.
