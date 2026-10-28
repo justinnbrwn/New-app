@@ -160,7 +160,7 @@ class Customers:
 
     def stripe(self, method, path, data=None, idempotency=None):
         self.require_billing()
-        headers = {'Authorization': 'Bearer ' + self.env['STRIPE_SECRET_KEY']}
+        headers = {'Authorization': 'Bearer ' + self.env['STRIPE_SECRET_KEY'], 'Stripe-Version': '2026-09-30.endive'}
         if idempotency:
             headers['Idempotency-Key'] = idempotency
         return self.transport(method, 'https://api.stripe.com/v1/' + path, headers, data, form=True)
@@ -219,6 +219,8 @@ class Customers:
         bucket = int(time.time() // 1800)
         result = self.stripe('POST', 'checkout/sessions', {
             'mode': 'subscription', 'line_items[0][price]': pid, 'line_items[0][quantity]': 1,
+            'managed_payments[enabled]': 'false', 'allowed_payment_method_types[0]': 'card',
+            'subscription_data[billing_mode][type]': 'flexible',
             'client_reference_id': who['id'], 'metadata[hashmargin_user_id]': who['id'],
             'subscription_data[metadata][hashmargin_user_id]': who['id'],
             'success_url': origin + '/account?checkout=returned', 'cancel_url': origin + '/account?checkout=canceled',

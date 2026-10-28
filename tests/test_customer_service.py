@@ -144,6 +144,9 @@ class CustomerTests(unittest.TestCase):
         data = self.provider.calls[-1][3]
         self.assertEqual(data['client_reference_id'], UID)
         self.assertEqual(data['line_items[0][price]'], 'price_test')
+        self.assertEqual(data['managed_payments[enabled]'], 'false')
+        self.assertEqual(data['allowed_payment_method_types[0]'], 'card')
+        self.assertEqual(self.provider.calls[-1][2]['Stripe-Version'], '2026-09-30.endive')
         self.assertEqual(data['subscription_data[metadata][hashmargin_user_id]'], UID)
         self.assertEqual(data['success_url'], ENV['APP_ORIGIN']+'/account?checkout=returned')
         self.assertNotIn('customer_email', data)
