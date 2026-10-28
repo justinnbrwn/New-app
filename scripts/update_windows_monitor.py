@@ -54,12 +54,15 @@ def update(repo, backup_root):
     (backup / 'original.py').write_bytes(original)
     (backup / 'base.py').write_bytes(base)
     # Backup stays outside the repository: private startup changes are never stashed/committed.
-    alert.write_bytes(base)
     try:
+        # Let Git apply Windows checkout filters/line endings and refresh its index.
+        # Writing raw object bytes can leave Windows Git reporting a local collision.
+        git('restore', '--source=HEAD', '--staged', '--worktree', '--', 'private_email_alerts.py')
         git('merge', '--ff-only', 'origin/' + branch)
-        (backup / 'upstream.py').write_bytes(alert.read_bytes())
+        (backup / 'upstream.py').write_bytes(alert.read_bytes().replace(b'\r\n', b'\n'))
+        (backup / 'base.py').write_bytes(base.replace(b'\r\n', b'\n'))
         merged = backup / 'merged.py'
-        merged.write_bytes(original)
+        merged.write_bytes(original.replace(b'\r\n', b'\n'))
         result = subprocess.run(['git', 'merge-file', '--quiet', str(merged),
             str(backup / 'base.py'), str(backup / 'upstream.py')],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)

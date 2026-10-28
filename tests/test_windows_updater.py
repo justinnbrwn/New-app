@@ -66,6 +66,15 @@ class WindowsUpdaterTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): update(self.repo, Path(self.temp.name) / 'backups')
         self.assertEqual(file.read_text(), original)
 
+    def test_windows_line_endings_preserve_settings_and_sync(self):
+        self.remote_update()
+        self.command('config', 'core.autocrlf', 'true')
+        file = self.repo / 'private_email_alerts.py'
+        file.write_bytes(file.read_bytes().replace(b'SETTING = 1', b'SETTING = 2').replace(b'\n', b'\r\n'))
+        update(self.repo, Path(self.temp.name) / 'backups')
+        self.assertIn('SETTING = 2', file.read_text())
+        self.assertIn('publish_workers([])', file.read_text())
+
     def test_other_tracked_changes_stop_before_mutation(self):
         self.remote_update()
         file = self.repo / 'customer_service.py'; file.write_text('LOCAL = True\n')
