@@ -22,7 +22,7 @@ The user saved server credentials directly in Render and explicitly approved ena
 
 ## Limits and gates before any live launch
 
-This is an integration preparation, not a commercial-ready service. There is no implementation of paid monitoring features. Add durable checkout-attempt coordination before live billing: current idempotency coalesces requests within a 30-minute window, but another window can create an additional open test checkout before the first webhook arrives. Keep test users informed and cancel surplus test subscriptions. Live billing remains blocked in code.
+This is an integration preparation, not a commercial-ready service. Braiins polling and email alerts already exist in the private Windows collector. The hosted account now reads isolated snapshots from that collector; this is a private owner pilot, not a multi-customer paid monitoring service. Add durable checkout-attempt coordination before live billing: current idempotency coalesces requests within a 30-minute window, but another window can create an additional open test checkout before the first webhook arrives. Keep test users informed and cancel surplus test subscriptions. Live billing remains blocked in code.
 
 Rate limiting is local to one server process and keyed by the direct peer (which may be Render's proxy); configure trusted proxy-aware, distributed abuse controls and verify client-IP handling before broad public auth. There is no custom durable entitlement cache: Stripe failures fail closed; canceled subscriptions cannot regain access from stale webhook events. Sign-in state is intentionally lost on checkout redirect; sign in again and refresh status after returning.
 
@@ -80,3 +80,21 @@ The actual signed Stripe webhook created exactly one subscription ownership reco
 Duplicate subscription checkout was rejected with 409. An invalid webhook signature was rejected with 400. The app-created customer portal returned 200 and displayed the paid sandbox invoice. Its cancellation flow confirmed service would end November 28. The disposable test subscription was then canceled immediately via the sandbox API (no proration/final invoice) to verify access removal and avoid leaving an active test subscription. The app then returned 200 with `test_subscription_active=false`, proving canceled access is removed.
 
 These are actual app/provider tests, distinct from the earlier standalone processor test and 74 scoped offline Python tests. Real time passage for expiry, past-due renewal simulation, and explicit webhook transport retry remain separate coverage gaps; commercial readiness is not claimed. Tax configuration must be reviewed before any future approved live launch; no tax service was activated.
+
+
+## Existing Braiins collector linked to hosted accounts
+
+The existing `private_email_alerts.py` optionally publishes sanitized worker snapshots through `integrations/monitor_publish.py`. It continues polling Braiins and sending the existing email alerts locally. No pool or SMTP credentials are uploaded. Publishing is opt-in; failures do not stop local alerts. No paid Render worker is used.
+
+The hosted `/api/monitor/publish` endpoint requires an HMAC signature from the existing private monitor key, a timestamp within five minutes, and bounded validated telemetry. It fixes ownership to the server-configured owner UUID; payloads cannot select another user. An atomic database function accepts only newer observations. The account reads snapshots with its own verified bearer under RLS, shows observation time/staleness, and safely renders names as text. Only one latest snapshot per user is stored; no historical-service promise is made.
+
+To complete the actual Windows connection (this cloud session cannot operate the Windows scheduled task):
+
+1. In Render Environment add `HASHMARGIN_MONITOR_KEY` using the same private key already used locally (minimum 32 characters). Never use the Braiins token for this value. Owner UUID `HASHMARGIN_MONITOR_USER_ID` is set automatically for the invited owner. Save/deploy. Never paste the key into chat.
+2. Update the existing Windows checkout to the deployment branch so it includes `account_monitor.py`, `integrations/monitor_publish.py`, and the changed collector.
+3. In the existing monitor's startup environment, add `HASHMARGIN_ACCOUNT_ORIGIN=https://hashmargin-preview.onrender.com` and ensure the existing `HASHMARGIN_MONITOR_KEY` is available to that process. Restart only the existing “HashMargin Pro Monitor” task. Do not launch a duplicate collector. Existing Braiins and SMTP settings stay local.
+4. Confirm “Account snapshot synced” appears in the local log, then sign in and refresh the account page. No worker rows or successful Braiins delivery are claimed until an actual collector upload arrives. Earlier Braiins test returned zero workers; empty data is explicitly distinct from offline miners.
+
+Verification: 61 tests under `tests/` plus 23 legacy tests pass (84 total); JavaScript syntax passes. Actual Postgres tests confirmed owner-only reads, denied anonymous reads/authenticated writes, no public function execution, and rejection of older snapshots; test writes rolled back. Security advisor reported no new findings; existing leaked-password warning remains on this passwordless beta (https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+Live billing is still blocked in code and only the Stripe sandbox is connected. The user's GO LIVE authorizes launch work; a live-account connection and production billing implementation/verification remain required. No live charge or paid service has been activated.

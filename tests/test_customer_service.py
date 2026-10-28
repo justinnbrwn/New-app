@@ -281,6 +281,15 @@ class ApiTests(unittest.TestCase):
         status, _, body = self.call('/account?checkout=returned')
         self.assertEqual(status, 200); self.assertIn(b'Live payments are disabled', body)
 
+    def test_monitor_requires_signed_in_account(self):
+        self.assertEqual(self.call('/api/monitor')[0], 401)
+
+    def test_collector_fails_closed_until_linked_and_limits_body(self):
+        from account_monitor import AccountMonitor
+        with patch.object(staging, 'MONITOR', AccountMonitor(Customers(dict(ENV), FakeProvider()))):
+            self.assertEqual(self.call('/api/monitor/publish', 'POST', '{}')[0], 503)
+            self.assertEqual(self.call('/api/monitor/publish', 'POST', 'x'*65537)[0], 413)
+
 
 if __name__ == '__main__':
     unittest.main()

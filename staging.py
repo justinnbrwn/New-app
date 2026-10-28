@@ -6,6 +6,7 @@ import os
 import threading
 import time
 from customer_service import Customers, ServiceError
+from account_monitor import AccountMonitor
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
@@ -14,6 +15,7 @@ HOMEPAGE = ROOT / "hashmargin-home.html"
 PUBLIC_DOCS = {"privacy": "PRIVACY.md", "terms": "TERMS.md"}
 
 CUSTOMERS = Customers()
+MONITOR = AccountMonitor(CUSTOMERS)
 _LIMITS = {}
 _LIMIT_LOCK = threading.Lock()
 
@@ -48,12 +50,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        allowed = {"/api/auth/code", "/api/auth/verify", "/api/auth/logout", "/api/checkout", "/api/portal", "/api/stripe/webhook"}
+        allowed = {"/api/auth/code", "/api/auth/verify", "/api/auth/logout", "/api/checkout", "/api/portal", "/api/stripe/webhook", "/api/monitor/publish"}
         if path not in allowed:
             self.api_reply(404, {"error": "Not found"})
             return
         try:
-            if path != "/api/stripe/webhook":
+            if path not in ("/api/stripe/webhook", "/api/monitor/publish"):
                 CUSTOMERS.require_accounts()
                 # No cookies and no cross-origin API access. Origin must match the
                 # configured site, never an untrusted Host header.
@@ -69,7 +71,9 @@ class Handler(BaseHTTPRequestHandler):
             raw = self.rfile.read(size)
             if len(raw) != size:
                 raise ServiceError(400, "Incomplete request")
-            if path == "/api/stripe/webhook":
+            if path == "/api/monitor/publish":
+                result = MONITOR.publish(raw, self.headers.get("X-HashMargin-Signature", ""))
+            elif path == "/api/stripe/webhook":
                 result = CUSTOMERS.webhook(raw, self.headers.get("Stripe-Signature", ""))
             else:
                 if self.headers.get_content_type() != "application/json":
@@ -104,10 +108,10 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/api/config":
             self.api_reply(200, {"accounts_enabled": CUSTOMERS.accounts_ready(), "test_checkout_enabled": CUSTOMERS.billing_ready(), "live_payments_enabled": False})
-        elif path == "/api/me":
+        elif path in ("/api/me", "/api/monitor"):
             try:
                 self.limited(path)
-                self.api_reply(200, CUSTOMERS.account(self.bearer()))
+                self.api_reply(200, MONITOR.read(self.bearer()) if path == "/api/monitor" else CUSTOMERS.account(self.bearer()))
             except ServiceError as exc:
                 self.api_reply(exc.status, {"error": exc.message})
             except Exception:

@@ -10,6 +10,7 @@ import time
 from email.message import EmailMessage
 from integrations.braiins_pool import fetch_workers
 from integrations.monitor_analysis import detect_changes
+from integrations.monitor_publish import publish_workers
 
 def send_email(events, smtp_factory=smtplib.SMTP_SSL):
     if not events:
@@ -55,6 +56,12 @@ def main():
         try:
             previous = check_once(previous)
             print("Worker check completed", flush=True)
+            try:
+                if publish_workers(previous):
+                    print("Account snapshot synced", flush=True)
+            except Exception:
+                # Sync failures must never stop local email-alert checks.
+                print("Account snapshot sync failed; local alerts remain enabled", flush=True)
         except Exception:
             print("Worker check or notification failed", flush=True)
         time.sleep(60)

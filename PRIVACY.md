@@ -11,3 +11,6 @@ When subscription testing is configured, Stripe hosts test checkout and subscrip
 Render and these providers may process technical access and security information, including IP addresses. Application logging omits request bodies and authentication secrets. Provider retention policies also apply. Account and test billing records remain until removed by the operator or under the providers' retention policies; automated deletion is not yet implemented.
 
 Do not submit wallet private keys, miner API tokens or sensitive information through the calculator. No commercial service is being offered. A verified support contact and account-deletion workflow must be available before wider account or paid-service launch.
+
+
+Private monitoring pilot: if the owner enables account sync on the existing Windows collector, sanitized worker names, operational state, five-minute hashrate, and observation time are stored as the latest snapshot in the configured Supabase project. Only that signed-in account may read it. Braiins tokens and SMTP credentials remain on the private computer. Email alerts continue through the existing locally configured mail provider. Turning sync off stops future uploads; the last reading is labeled stale after three minutes. This is an owner-only pilot.
