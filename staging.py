@@ -99,8 +99,13 @@ class Handler(BaseHTTPRequestHandler):
                     result = CUSTOMERS.portal(self.bearer())
             self.api_reply(200, result)
         except ServiceError as exc:
+            if path == "/api/monitor/publish":
+                # Our ServiceError messages are fixed/sanitized; never log headers or payloads.
+                print(f'Private collector upload rejected: HTTP {exc.status}; {exc.message}', flush=True)
             self.api_reply(exc.status, {"error": exc.message})
         except Exception:
+            if path == "/api/monitor/publish":
+                print('Private collector upload failed: internal error; no request details logged', flush=True)
             # Do not leak provider errors, financial data, request bodies or secrets.
             self.api_reply(503, {"error": "Service temporarily unavailable"})
 
