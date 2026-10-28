@@ -5,6 +5,13 @@ from integrations.monitor_analysis import detect_changes
 import private_email_alerts as alerts
 
 class EmailAlertTests(unittest.TestCase):
+    def test_sync_diagnostic_never_returns_exception_details(self):
+        from urllib.error import HTTPError
+        from customer_service import ServiceError
+        self.assertEqual(alerts.sync_error_code(HTTPError('https://private.example/secret',401,'secret',{},None)), 'HTTP_401')
+        self.assertEqual(alerts.sync_error_code(ValueError('private-secret-value')), 'LOCAL_CONFIGURATION')
+        self.assertEqual(alerts.sync_error_code(ServiceError(400,'Invalid hashrate unit')), 'WORKER_HASHRATE_UNIT')
+        self.assertEqual(alerts.sync_error_code(RuntimeError('private-secret-value')), 'UNEXPECTED_ERROR')
     def test_no_alert_on_first_observation(self):
         send = Mock()
         current = alerts.check_once(None, fetch=lambda: [{"name":"rig","state":"off"}], send=send)
