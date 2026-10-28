@@ -1,0 +1,25 @@
+# Optional private deployment. Do NOT merge into the public render.yaml.
+# Creating this Blueprint may incur charges. Review pricing before approval.
+# No public HTTP listener, no health endpoint, and no secrets in source control.
+services:
+  - type: worker
+    name: hashmargin-private-alerts
+    runtime: python
+    plan: starter
+    buildCommand: python -m compileall -q integrations private_email_alerts.py
+    startCommand: python -u private_email_alerts.py
+    envVars:
+      - key: BRAIINS_POOL_TOKEN
+        sync: false
+      - key: HASHMARGIN_SMTP_HOST
+        value: smtp.gmail.com
+      - key: HASHMARGIN_SMTP_PORT
+        value: "465"
+      - key: HASHMARGIN_EMAIL_FROM
+        sync: false
+      - key: HASHMARGIN_EMAIL_TO
+        sync: false
+      - key: HASHMARGIN_SMTP_USER
+        sync: false
+      - key: HASHMARGIN_SMTP_PASSWORD
+        sync: false

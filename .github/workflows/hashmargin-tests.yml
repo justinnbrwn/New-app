@@ -1,0 +1,21 @@
+name: HashMargin private monitor tests
+on:
+  push:
+    branches: [feature/hashmargin-pro-dashboard, launch/hashmargin-website-beta, setup/hashmargin-accounts-test-billing]
+  pull_request:
+    branches: [feature/hashmargin-pro-dashboard, launch/hashmargin-website-beta, setup/hashmargin-accounts-test-billing]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run offline tests
+        run: |
+          python -m compileall -q integrations private_monitor.py customer_service.py staging.py tests
+          python -m unittest discover -s tests -v
