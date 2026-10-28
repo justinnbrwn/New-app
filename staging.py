@@ -155,5 +155,7 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 if __name__ == "__main__":
+    collector_issues = MONITOR.configuration_issues()
+    print('Private collector configuration: ' + ('; '.join(collector_issues) if collector_issues else 'ready'), flush=True)
     port = int(os.environ.get("PORT", "10000"))
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()

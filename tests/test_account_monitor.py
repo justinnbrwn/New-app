@@ -25,6 +25,15 @@ class MonitorTests(unittest.TestCase):
         digest = hmac.new(b'k' * 40, stamp.encode() + b'.' + raw, hashlib.sha256).hexdigest()
         return stamp + ':' + digest
 
+    def test_configuration_diagnostics_never_include_secret_values(self):
+        self.assertEqual(self.monitor.configuration_issues(), [])
+        self.customers.env['HASHMARGIN_MONITOR_KEY'] = 'private-short-value'
+        result = self.monitor.configuration_issues()
+        self.assertEqual(result, ['HASHMARGIN_MONITOR_KEY shorter than 32 characters'])
+        self.assertNotIn('private-short-value', str(result))
+        self.customers.env.pop('HASHMARGIN_MONITOR_USER_ID')
+        self.assertIn('HASHMARGIN_MONITOR_USER_ID missing', self.monitor.configuration_issues())
+
     def test_publish_forces_server_owner_and_strips_private_fields(self):
         raw = json.dumps({'workers': [{**WORKERS[0], 'pool_token': 'must-not-be-saved'}]}).encode()
         self.assertEqual(self.monitor.publish(raw, self.signature(raw))['worker_count'], 1)

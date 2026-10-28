@@ -38,6 +38,21 @@ class AccountMonitor:
     def __init__(self, customers, clock=time.time):
         self.customers, self.clock = customers, clock
 
+    def configuration_issues(self):
+        """Safe startup diagnostics: setting names/reasons, never secret values."""
+        env = self.customers.env
+        issues = []
+        key = env.get('HASHMARGIN_MONITOR_KEY', '')
+        if not key:
+            issues.append('HASHMARGIN_MONITOR_KEY missing')
+        elif len(key) < 32:
+            issues.append('HASHMARGIN_MONITOR_KEY shorter than 32 characters')
+        if not env.get('HASHMARGIN_MONITOR_USER_ID'):
+            issues.append('HASHMARGIN_MONITOR_USER_ID missing')
+        if not env.get('SUPABASE_SERVICE_ROLE_KEY'):
+            issues.append('SUPABASE_SERVICE_ROLE_KEY missing')
+        return issues
+
     def publish(self, raw, signature):
         env = self.customers.env
         key = env.get('HASHMARGIN_MONITOR_KEY', '')
