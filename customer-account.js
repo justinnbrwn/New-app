@@ -45,5 +45,5 @@
     token = ''; el('signedin').hidden = true; el('signin').hidden = false;
     message(failed ? 'Local sign-in cleared. Server sign-out could not be confirmed; the short-lived token will expire.' : 'Signed out.');
   });
-  api('/api/config').then(result => { config = result; el('signin').hidden = !result.accounts_enabled; message(result.accounts_enabled ? 'Sign in with a code sent to your email. Live charges are disabled.' : 'Customer accounts are being prepared. Sign-in and test checkout are unavailable until configuration is complete.'); }).catch(() => message('Account service unavailable. Please try later.'));
+  api('/api/config').then(result => { config = result; el('signin').hidden = !result.accounts_enabled; message(result.accounts_enabled ? 'Sign in with a code or copied confirmation link sent to your email. Live charges are disabled.' : 'Customer accounts are being prepared. Sign-in and test checkout are unavailable until configuration is complete.'); }).catch(() => message('Account service unavailable. Please try later.'));
 })();

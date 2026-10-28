@@ -94,6 +94,39 @@ class CustomerTests(unittest.TestCase):
         self.assertEqual(result['access_token'], 'verified-token')
         self.assertNotIn('refresh_token', result)
 
+    def test_original_confirmation_link_uses_fixed_provider_endpoint(self):
+        link = ENV['SUPABASE_URL'] + '/auth/v1/verify?token=' + 'a'*56 + '&type=signup&redirect_to=https%3A%2F%2Fevil.test'
+        result = self.service.verify_code({'email': 'test@example.com', 'code': link})
+        self.assertEqual(result['access_token'], 'verified-token')
+        call = next(c for c in self.provider.calls if '/auth/v1/verify' in c[1])
+        self.assertEqual(call[1], ENV['SUPABASE_URL'] + '/auth/v1/verify')
+        self.assertEqual(call[3], {'token_hash': 'a'*56, 'type': 'signup'})
+        self.assertFalse(any('evil.test' in c[1] for c in self.provider.calls))
+
+    def test_untrusted_links_and_non_login_types_rejected(self):
+        good = ENV['SUPABASE_URL'] + '/auth/v1/verify?token=' + 'a'*56 + '&type=magiclink'
+        for link in (good.replace('project.supabase.co', 'evil.test'),
+                     good.replace('https:', 'http:'), good + '&type=signup',
+                     good.replace('type=magiclink', 'type=recovery'),
+                     good.replace('type=magiclink', 'type=email_change'),
+                     good + '#fragment', good.replace('/auth/v1/verify', '/evil')):
+            self.rejected(400, lambda: self.service.verify_code({'email': 'test@example.com', 'code': link}))
+        self.assertEqual(self.provider.calls, [])
+
+    def test_email_mismatch_signs_out_and_never_returns_session(self):
+        link = ENV['SUPABASE_URL'] + '/auth/v1/verify?token=' + 'a'*56 + '&type=signup'
+        self.rejected(403, lambda: self.service.verify_code({'email': 'other@example.com', 'code': link}))
+        self.assertTrue(any('/auth/v1/logout' in c[1] for c in self.provider.calls))
+
+    def test_beta_invitation_restriction_blocks_uninvited_email(self):
+        self.service.env['HASHMARGIN_ACCOUNT_TEST_EMAILS'] = 'invited@example.com'
+        self.rejected(403, lambda: self.service.send_code({'email': 'test@example.com'}))
+        self.rejected(403, lambda: self.service.verify_code({'email': 'test@example.com', 'code': '123456'}))
+        self.assertEqual(self.provider.calls, [])
+        self.rejected(403, lambda: self.service.identity('verified-token'))
+        self.service.env['HASHMARGIN_ACCOUNT_TEST_EMAILS'] = ' TEST@example.com '
+        self.assertEqual(self.service.identity('verified-token')['id'], UID)
+
     def test_invalid_code_and_email(self):
         self.rejected(400, lambda: self.service.send_code({'email': 'bad'}))
         self.rejected(400, lambda: self.service.verify_code({'email': 'test@example.com', 'code': 'text'}))

@@ -38,3 +38,14 @@ Finish support-contact verification and an account-data deletion flow before wid
 - `node --check customer-account.js`: passed.
 - Broad root test discovery also finds three pre-existing release tests for absent Android/compose files. Those checks cannot pass in this website-only checkout and were not represented as passing.
 - Database RLS enforcement and real Stripe/email flows remain pending connected-service verification.
+
+
+## October 28 connected-service verification
+
+The Free Supabase project is connected in Render using its publishable key (kept out of source). Database checks passed against actual Postgres: two synthetic users could each read only their own rows; anonymous reads and authenticated writes were denied; even privileged ownership reassignment was rejected by the trigger. All synthetic test data was rolled back. The security advisor reported no issues.
+
+Email delivery through the configured Gmail SMTP service was verified in the owner's inbox. The default signup template contains a confirmation link, so the website now also accepts the copied original Supabase confirmation link. It parses only the trusted project's HTTPS verification link, never fetches a supplied URL, ignores redirect targets, accepts only sign-in/signup types, verifies through the fixed Auth API endpoint, and checks that the verified email matches the requested email. Numeric OTPs remain supported. This avoids requiring template edits for beta testing.
+
+Account testing is limited by `HASHMARGIN_ACCOUNT_TEST_EMAILS` to the invited owner address. Wider customer signup remains gated until the remaining launch items are complete. Billing remains disabled, and no Stripe sandbox or live transaction has been attempted. Do not enable live charges.
+
+Updated offline verification: 51 tests under `tests/` and 23 legacy API/tenant tests pass. Real-provider signup/sign-in/logout verification is performed separately after deployment; do not interpret fake-provider unit tests as proof of Stripe integration.

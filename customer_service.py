@@ -10,7 +10,7 @@ import os
 import re
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode, urlsplit, parse_qs
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from uuid import UUID
 
@@ -97,23 +97,55 @@ class Customers:
             headers['Authorization'] = 'Bearer ' + token
         return self.transport(method, self.env['SUPABASE_URL'].rstrip('/') + '/auth/v1/' + path, headers, data)
 
+    def require_invited_email(self, email):
+        # Optional beta restriction while billing and wider launch remain unfinished.
+        allowed = {x.strip().lower() for x in self.env.get('HASHMARGIN_ACCOUNT_TEST_EMAILS', '').split(',') if x.strip()}
+        if allowed and email.lower() not in allowed:
+            raise ServiceError(403, 'Account testing is limited to invited email addresses')
+
     def send_code(self, data):
         email = data.get('email', '')
         if not isinstance(email, str) or len(email) > 254 or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email):
             raise ServiceError(400, 'Enter a valid email address')
+        self.require_invited_email(email)
         self.auth('POST', 'otp', {'email': email.strip().lower(), 'create_user': True})
-        return {'message': 'If available, a sign-in code has been sent. Check your email.'}
+        return {'message': 'If available, a sign-in email has been sent. Paste its code or copy its confirmation link into the field below.'}
 
     def verify_code(self, data):
         email, code = data.get('email', ''), data.get('code', '')
-        if not isinstance(email, str) or len(email) > 254 or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email) or not isinstance(code, str) or not re.fullmatch(r'\d{6,10}', code):
-            raise ServiceError(400, 'Enter your email and sign-in code')
-        session = self.auth('POST', 'verify', {'email': email.lower(), 'token': code, 'type': 'email'})
+        if not isinstance(email, str) or len(email) > 254 or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email) or not isinstance(code, str) or len(code) > 4096:
+            raise ServiceError(400, 'Enter your email and sign-in code or copied confirmation link')
+        email, code = email.lower(), code.strip()
+        self.require_invited_email(email)
+        if re.fullmatch(r'\d{6,10}', code):
+            payload = {'email': email, 'token': code, 'type': 'email'}
+        else:
+            # Parse credentials only. Never fetch a pasted URL or follow its redirect.
+            # A fixed trusted Auth endpoint performs all verification.
+            try:
+                link, project = urlsplit(code), urlsplit(self.env.get('SUPABASE_URL', ''))
+                query = parse_qs(link.query)
+                hashes, types = query.get('token', []), query.get('type', [])
+                if (link.scheme != 'https' or link.hostname != project.hostname or not project.hostname
+                        or link.username or link.password or link.port not in (None, 443)
+                        or link.path != '/auth/v1/verify' or link.fragment
+                        or len(hashes) != 1 or len(types) != 1
+                        or not re.fullmatch(r'[a-fA-F0-9]{32,128}', hashes[0])
+                        or types[0] not in ('signup', 'magiclink', 'email')):
+                    raise ValueError()
+                payload = {'token_hash': hashes[0], 'type': types[0]}
+            except ValueError:
+                raise ServiceError(400, 'Use the code or original confirmation link from your HashMargin email') from None
+        session = self.auth('POST', 'verify', payload)
         token = session.get('access_token')
         if not token:
-            raise ServiceError(401, 'Invalid or expired code')
+            raise ServiceError(401, 'Invalid or expired code or link')
         # Never return refresh tokens. Browser keeps this short-lived bearer only in memory.
-        self.identity(token)
+        who = self.identity(token)
+        if who['email'].lower() != email:
+            # Do not sign the visitor into an account different from the one requested.
+            self.auth('POST', 'logout', {}, token)
+            raise ServiceError(403, 'The confirmation link belongs to another email address')
         return {'access_token': token, 'expires_in': session.get('expires_in', 3600)}
 
     def identity(self, token):
@@ -123,6 +155,7 @@ class Customers:
         uid = user_id(obj.get('id'))
         if not obj.get('email_confirmed_at') or obj.get('is_anonymous'):
             raise ServiceError(403, 'Verify your email before continuing')
+        self.require_invited_email(obj.get('email', ''))
         return {'id': uid, 'email': obj.get('email', '')}
 
     def stripe(self, method, path, data=None, idempotency=None):
